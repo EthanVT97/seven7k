@@ -3,39 +3,16 @@ const config = {
     testEnvironment: 'jsdom',
     roots: ['<rootDir>/src'],
     transform: {
-        '^.+\\.(ts|tsx|js|jsx)$': ['babel-jest', {
-            presets: [
-                ['@babel/preset-env', {
-                    targets: { node: 'current' },
-                    modules: 'auto'
-                }],
-                ['@babel/preset-react', {
-                    runtime: 'automatic',
-                    importSource: '@testing-library/react'
-                }],
-                ['@babel/preset-typescript', {
-                    isTSX: true,
-                    allExtensions: true
-                }]
-            ],
-            plugins: [
-                '@babel/plugin-transform-runtime',
-                'babel-plugin-transform-import-meta'
-            ]
-        }],
-        '^.+\\.css$': '<rootDir>/config/jest/cssTransform.js',
-        '^(?!.*\\.(js|jsx|ts|tsx|css|json)$)': '<rootDir>/config/jest/fileTransform.js'
+        '^.+\\.(ts|tsx)$': 'ts-jest'
     },
     setupFilesAfterEnv: [
-        '@testing-library/jest-dom/extend-expect',
         '<rootDir>/src/setupTests.ts'
     ],
     testRegex: '(/__tests__/.*|(\\.|/)(test|spec))\\.(jsx?|tsx?)$',
     moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
     moduleNameMapper: {
-        '^@/(.*)$': '<rootDir>/src/$1',
         '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
-        '\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$': '<rootDir>/config/jest/fileMock.js'
+        '\\.(gif|ttf|eot|svg|png)$': '<rootDir>/__mocks__/fileMock.js'
     },
     collectCoverageFrom: [
         'src/**/*.{js,jsx,ts,tsx}',

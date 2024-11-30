@@ -1,12 +1,7 @@
-import React from 'react';
 import { render, screen } from '@testing-library/react';
-import '@testing-library/jest-dom';
 import { Provider } from 'react-redux';
-import configureStore from 'redux-mock-store';
-import MessageThread from '../../components/messaging/MessageThread';
-import { store } from '../../store/store';
-
-const mockStore = configureStore([]);
+import { store } from '../../../store/store';
+import MessageThread from '../MessageThread';
 
 // Mock scrollIntoView
 const mockScrollIntoView = jest.fn();
@@ -16,14 +11,7 @@ Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
 });
 
 describe('MessageThread Component', () => {
-    let store: ReturnType<typeof mockStore>;
-
     beforeEach(() => {
-        store = mockStore({
-            auth: {
-                user: { id: '123', name: 'Test User' }
-            }
-        });
         mockScrollIntoView.mockClear();
     });
 
@@ -33,7 +21,6 @@ describe('MessageThread Component', () => {
                 <MessageThread messages={[]} loading={false} />
             </Provider>
         );
-
         expect(screen.getByText(/No messages yet/i)).toBeInTheDocument();
     });
 
@@ -43,7 +30,6 @@ describe('MessageThread Component', () => {
                 <MessageThread messages={[]} loading={true} />
             </Provider>
         );
-
         expect(screen.getByRole('status')).toBeInTheDocument();
     });
 

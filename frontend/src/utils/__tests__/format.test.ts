@@ -1,13 +1,28 @@
 import { formatDate } from '../format';
 
 describe('formatDate', () => {
-    it('formats date correctly', () => {
-        const date = new Date('2023-01-01T00:00:00.000Z');
-        expect(formatDate(date)).toBe('January 1, 2023');
+    beforeAll(() => {
+        // Mock Date.now() to return a fixed timestamp
+        jest.useFakeTimers();
+        jest.setSystemTime(new Date('2024-01-15T12:00:00Z'));
     });
 
-    it('handles different months', () => {
-        const date = new Date('2023-12-25T00:00:00.000Z');
-        expect(formatDate(date)).toBe('December 25, 2023');
+    afterAll(() => {
+        jest.useRealTimers();
+    });
+
+    it('formats today\'s date correctly', () => {
+        const today = new Date('2024-01-15T10:30:00Z');
+        expect(formatDate(today)).toMatch(/\d{1,2}:\d{2}/);
+    });
+
+    it('formats yesterday\'s date correctly', () => {
+        const yesterday = new Date('2024-01-14T15:45:00Z');
+        expect(formatDate(yesterday)).toMatch(/Yesterday \d{1,2}:\d{2}/);
+    });
+
+    it('formats older dates correctly', () => {
+        const oldDate = new Date('2024-01-01T09:15:00Z');
+        expect(formatDate(oldDate)).toMatch(/Jan 1, 2024/);
     });
 }); 
