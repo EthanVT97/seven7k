@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <meta name="theme-color" content="#6366F1" />
+    <meta name="description"
+        content="SEVEN7K - Unified Messaging Platform for WhatsApp, Facebook, Telegram, LINE, and Viber" />
+    <meta name="keywords" content="messaging, chat, whatsapp, facebook, telegram, line, viber, unified messaging" />
+    <meta name="author" content="SEVEN7K" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://seven7k.com/" />
+    <meta property="og:title" content="SEVEN7K - Unified Messaging Platform" />
+    <meta property="og:description" content="Connect and manage all your messaging platforms in one place" />
+    <meta property="og:image" content="/og-image.png" />
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://seven7k.com/" />
+    <meta property="twitter:title" content="SEVEN7K - Unified Messaging Platform" />
+    <meta property="twitter:description" content="Connect and manage all your messaging platforms in one place" />
+    <meta property="twitter:image" content="/og-image.png" />
+
+    <!-- PWA Support -->
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" href="/logo192.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="SEVEN7K" />
+
+    <!-- Resource Hints -->
+    <link rel="preconnect" href="https://api.seven7k.com" crossorigin />
+    <link rel="dns-prefetch" href="https://api.seven7k.com" />
+
+    <!-- Fonts -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+        media="print" onload="this.media='all'" />
+
+    <title>SEVEN7K - Unified Messaging Platform</title>
+
+    <!-- Critical CSS -->
+    <style>
+        @font-face {
+            font-family: 'Inter';
+            src: url('/fonts/inter-var.woff2') format('woff2');
+            font-weight: 100 900;
+            font-display: swap;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+                Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        #root {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f9fafb;
+            transition: background-color 0.3s ease;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .loading {
+                background-color: #1f2937;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <noscript>
+        <div style="padding: 20px; text-align: center; background: #f44336; color: white;">
+            You need to enable JavaScript to run this app.
+        </div>
+    </noscript>
+
+    <div id="root">
+        <!-- Initial loading state -->
+        <div class="loading">
+            <img src="/logo-animated.svg" alt="Loading SEVEN7K" width="64" height="64" loading="eager"
+                decoding="async" />
+        </div>
+    </div>
+
+    <!-- Error Tracking -->
+    <script>
+        window.onerror = function (msg, url, lineNo, columnNo, error) {
+            console.error('Error:', {
+                message: msg,
+                url: url,
+                line: lineNo,
+                column: columnNo,
+                error: error
+            });
+            return false;
+        };
+
+        window.addEventListener('unhandledrejection', function (event) {
+            console.error('Unhandled promise rejection:', event.reason);
+        });
+    </script>
+
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator && window.location.protocol === 'https:') {
+            window.addEventListener('load', async () => {
+                try {
+                    const registration = await navigator.serviceWorker.register('/service-worker.js', {
+                        scope: '/'
+                    });
+                    console.log('SW registered:', registration.scope);
+                } catch (error) {
+                    console.error('SW registration failed:', error);
+                }
+            });
+        }
+    </script>
+</body>
+
+</html>
