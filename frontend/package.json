@@ -67,7 +67,9 @@
     "scripts": {
         "start": "webpack serve --mode development --open",
         "build": "webpack --mode production",
-        "test": "jest --passWithNoTests"
+        "test": "jest --passWithNoTests",
+        "type-check": "tsc --noEmit",
+        "type-check:watch": "tsc --noEmit --watch"
     },
     "browserslist": {
         "production": [
