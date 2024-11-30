@@ -29,10 +29,22 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: |
-            ${{ env.FRONTEND_DIR }}/package-lock.json
-            ${{ env.BACKEND_DIR }}/package-lock.json
+
+      - name: Cache Frontend Dependencies
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.FRONTEND_DIR }}/node_modules
+          key: ${{ runner.os }}-frontend-${{ hashFiles('**/frontend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-frontend-
+
+      - name: Cache Backend Dependencies
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.BACKEND_DIR }}/node_modules
+          key: ${{ runner.os }}-backend-${{ hashFiles('**/backend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-backend-
 
       - name: Install Frontend Dependencies
         run: |
