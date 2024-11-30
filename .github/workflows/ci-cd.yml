@@ -15,26 +15,39 @@ jobs:
         uses: actions/setup-node@v2
         with:
           node-version: '16'
+          cache: 'npm'
+          cache-dependency-path: |
+            frontend/package-lock.json
+            backend/package-lock.json
       
-      - name: Install Dependencies
+      - name: Install Frontend Dependencies
         run: |
           cd frontend
-          npm install
-          cd ../backend
-          npm install
+          npm ci
+      
+      - name: Install Backend Dependencies
+        run: |
+          cd backend
+          npm ci
 
-      - name: Run Tests
+      - name: Run Frontend Tests
         run: |
           cd frontend
-          npm test
-          cd ../backend
+          npm test -- --watchAll=false
+
+      - name: Run Backend Tests
+        run: |
+          cd backend
           npm test
 
-      - name: Build
+      - name: Build Frontend
         run: |
           cd frontend
           npm run build
-          cd ../backend
+
+      - name: Build Backend
+        run: |
+          cd backend
           npm run build
 
   deploy:
@@ -43,7 +56,18 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - name: Deploy to Production
+      - uses: actions/checkout@v2
+      
+      - name: Deploy to DigitalOcean
         uses: digitalocean/action-doctl@v2
         with:
-          token: ${{ secrets.DO_ACCESS_TOKEN }}
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+      
+      - name: Save DigitalOcean kubeconfig
+        run: doctl kubernetes cluster kubeconfig save ${{ secrets.DIGITALOCEAN_CLUSTER_NAME }}
+      
+      - name: Deploy to Kubernetes
+        run: |
+          kubectl apply -f k8s/
+          kubectl rollout restart deployment/frontend-deployment
+          kubectl rollout restart deployment/backend-deployment
