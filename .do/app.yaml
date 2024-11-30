@@ -1,0 +1,17 @@
+name: seven7k-chatbot
+region: nyc
+services:
+  - name: web
+    github:
+      repo: EthanVT97/seven7k
+      branch: main
+    buildpacks:
+      - name: nodejs
+    environment_slug: node-js
+    build_command: npm run build
+    run_command: npm start
+    envs:
+      - key: MONGODB_URI
+        value: "${MONGODB_URI}"
+      - key: NODE_ENV
+        value: "production"

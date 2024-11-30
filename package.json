@@ -1,0 +1,15 @@
+{
+  "name": "seven7k-chatbot",
+  "version": "1.0.0",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "build": "cd seven7k && npm install && npm run build && cd ../frontend && npm install && npm run build",
+    "postinstall": "npm run build"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}
