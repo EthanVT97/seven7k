@@ -13,6 +13,7 @@ export interface Message {
     createdAt?: string;
     status?: 'sent' | 'delivered' | 'read' | 'unread';
     platform: string;
+    role?: 'user' | 'assistant' | 'system';
     attachments?: {
         type: 'image' | 'video' | 'audio' | 'file';
         url: string;
