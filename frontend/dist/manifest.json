@@ -1,0 +1,63 @@
+{
+    "short_name": "SEVEN7K",
+    "name": "SEVEN7K - Unified Messaging",
+    "description": "Connect and manage all your messaging platforms in one place",
+    "icons": [
+        {
+            "src": "favicon.ico",
+            "sizes": "64x64",
+            "type": "image/x-icon"
+        },
+        {
+            "src": "logo192.png",
+            "type": "image/png",
+            "sizes": "192x192",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "logo512.png",
+            "type": "image/png",
+            "sizes": "512x512",
+            "purpose": "any maskable"
+        }
+    ],
+    "start_url": ".",
+    "display": "standalone",
+    "theme_color": "#6366F1",
+    "background_color": "#F9FAFB",
+    "orientation": "any",
+    "categories": [ "productivity", "social", "communication" ],
+    "shortcuts": [
+        {
+            "name": "New Message",
+            "short_name": "New",
+            "description": "Start a new conversation",
+            "url": "/new",
+            "icons": [ { "src": "/shortcuts/new.png", "sizes": "192x192" } ]
+        },
+        {
+            "name": "Recent Chats",
+            "short_name": "Chats",
+            "description": "View recent conversations",
+            "url": "/chats",
+            "icons": [ { "src": "/shortcuts/chats.png", "sizes": "192x192" } ]
+        }
+    ],
+    "screenshots": [
+        {
+            "src": "/screenshots/desktop.png",
+            "sizes": "1280x800",
+            "type": "image/png",
+            "platform": "wide",
+            "label": "Desktop view of SEVEN7K"
+        },
+        {
+            "src": "/screenshots/mobile.png",
+            "sizes": "750x1334",
+            "type": "image/png",
+            "platform": "narrow",
+            "label": "Mobile view of SEVEN7K"
+        }
+    ],
+    "prefer_related_applications": false
+}
