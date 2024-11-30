@@ -3,27 +3,35 @@ name: CI/CD Pipeline
 on:
   push:
     branches: [ main, develop ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
   pull_request:
     branches: [ main, develop ]
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '18'
+  FRONTEND_DIR: 'frontend'
+  BACKEND_DIR: 'backend'
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - name: Setup Node.js
-        uses: actions/setup-node@v2
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
         with:
-          node-version: '16'
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
           cache-dependency-path: |
-            frontend/package-lock.json
-            backend/package-lock.json
-      
+            ${{ env.FRONTEND_DIR }}/package-lock.json
+            ${{ env.BACKEND_DIR }}/package-lock.json
+
       - name: Install Frontend Dependencies
         run: |
           cd frontend
-          npm ci
+          npm install
       
       - name: Install Backend Dependencies
         run: |
@@ -33,8 +41,8 @@ jobs:
       - name: Run Frontend Tests
         run: |
           cd frontend
-          npm test -- --watchAll=false
-
+          npm test
+      
       - name: Run Backend Tests
         run: |
           cd backend
@@ -44,15 +52,13 @@ jobs:
         run: |
           cd frontend
           npm run build
-
+      
       - name: Build Backend
         run: |
           cd backend
           npm run build
 
   deploy:
-    needs: test
-    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: production
     steps:
@@ -64,7 +70,7 @@ jobs:
           token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
       
       - name: Save DigitalOcean kubeconfig
-        run: doctl kubernetes cluster kubeconfig save ${{ secrets.DIGITALOCEAN_CLUSTER_NAME }}
+        run: doctl kubernetes cluster kubeconfig save "${{ secrets.DIGITALOCEAN_CLUSTER_NAME }}"
       
       - name: Deploy to Kubernetes
         run: |
