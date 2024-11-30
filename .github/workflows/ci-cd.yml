@@ -14,14 +14,19 @@ env:
   NODE_VERSION: '18'
   FRONTEND_DIR: 'frontend'
   BACKEND_DIR: 'backend'
+  DIGITALOCEAN_TOKEN: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+  DIGITALOCEAN_CLUSTER_NAME: ${{ secrets.DIGITALOCEAN_CLUSTER_NAME }}
+  KUBERNETES_CONFIG_DIR: 'k8s'
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout Repository
+        uses: actions/checkout@v3
 
-      - uses: actions/setup-node@v3
+      - name: Set Up Node.js
+        uses: actions/setup-node@v3
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
@@ -65,18 +70,19 @@ jobs:
     environment: production
     if: github.ref == 'refs/heads/main'
     steps:
-      - uses: actions/checkout@v3
-      
-      - name: Deploy to DigitalOcean
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Set Up doctl for DigitalOcean
         uses: digitalocean/action-doctl@v2
         with:
-          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+          token: ${{ env.DIGITALOCEAN_TOKEN }}
       
-      - name: Save DigitalOcean kubeconfig
-        run: doctl kubernetes cluster kubeconfig save "${{ secrets.DIGITALOCEAN_CLUSTER_NAME }}"
-      
+      - name: Save Kubernetes Config
+        run: doctl kubernetes cluster kubeconfig save "${{ env.DIGITALOCEAN_CLUSTER_NAME }}"
+
       - name: Deploy to Kubernetes
         run: |
-          kubectl apply -f k8s/
+          kubectl apply -f ${{ env.KUBERNETES_CONFIG_DIR }}/
           kubectl rollout restart deployment/frontend-deployment
           kubectl rollout restart deployment/backend-deployment

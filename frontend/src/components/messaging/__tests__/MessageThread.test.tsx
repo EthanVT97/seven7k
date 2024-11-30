@@ -41,7 +41,22 @@ describe('MessageThread Component', () => {
 
         render(
             <Provider store={store}>
-                <MessageThread messages={messages} loading={false} />
+                <MessageThread messages={[
+                    {
+                        id: '1',
+                        content: 'Hello',
+                        sender: { id: 'current_user_id', name: 'User' },
+                        platform: 'web',
+                        timestamp: new Date().toISOString()
+                    },
+                    {
+                        id: '2',
+                        content: 'Hi there!',
+                        sender: { id: 'assistant', name: 'Assistant' },
+                        platform: 'web',
+                        timestamp: new Date().toISOString()
+                    }
+                ]} loading={false} />
             </Provider>
         );
 
