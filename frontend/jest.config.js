@@ -1,68 +1,44 @@
 /** @type {import('jest').Config} */
-const config = {
+module.exports = {
     testEnvironment: 'jsdom',
     roots: ['<rootDir>/src'],
     transform: {
         '^.+\\.(ts|tsx)$': 'ts-jest'
     },
-    setupFilesAfterEnv: [
-        '<rootDir>/src/setupTests.ts'
-    ],
-    testRegex: '(/__tests__/.*|(\\.|/)(test|spec))\\.(jsx?|tsx?)$',
-    moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
+    setupFilesAfterEnv: ['<rootDir>/src/setupTests.ts'],
+    testRegex: '(/__tests__/.*|(\\.|/)(test|spec))\\.(tsx?)$',
+    moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
     moduleNameMapper: {
         '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
-        '\\.(gif|ttf|eot|svg|png)$': '<rootDir>/__mocks__/fileMock.js'
+        '\\.(gif|ttf|eot|svg|png)$': '<rootDir>/src/__mocks__/fileMock.js',
+        '^@/(.*)$': '<rootDir>/src/$1'
     },
     collectCoverageFrom: [
-        'src/**/*.{js,jsx,ts,tsx}',
+        'src/**/*.{ts,tsx}',
         '!src/**/*.d.ts',
         '!src/index.tsx',
-        '!src/serviceWorker.ts',
         '!src/setupTests.ts',
-        '!src/**/*.stories.{js,jsx,ts,tsx}',
-        '!src/**/*.types.{js,jsx,ts,tsx}',
-        '!src/mocks/**',
-        '!src/**/index.{js,jsx,ts,tsx}'
+        '!src/**/*.stories.tsx',
+        '!src/types/**',
+        '!src/mocks/**'
     ],
     coverageThreshold: {
         global: {
-            branches: 70,
-            functions: 70,
-            lines: 70,
-            statements: 70
+            branches: 80,
+            functions: 80,
+            lines: 80,
+            statements: 80
         }
     },
-    testPathIgnorePatterns: [
-        '/node_modules/',
-        '/dist/',
-        '/.next/',
-        '/build/',
-        '/coverage/'
-    ],
+    testPathIgnorePatterns: ['/node_modules/', '/dist/'],
     transformIgnorePatterns: [
-        '/node_modules/(?!(@babel/runtime|@babel/runtime-corejs3|@testing-library)/).+\\.js$',
+        '/node_modules/',
         '^.+\\.module\\.(css|sass|scss)$'
     ],
     globals: {
         'ts-jest': {
-            isolatedModules: true,
-            tsconfig: '<rootDir>/tsconfig.json'
+            tsconfig: '<rootDir>/tsconfig.json',
+            isolatedModules: true
         }
-    },
-    watchPlugins: [
-        'jest-watch-typeahead/filename',
-        'jest-watch-typeahead/testname'
-    ],
-    verbose: true,
-    testTimeout: 10000,
-    clearMocks: true,
-    resetMocks: false,
-    restoreMocks: true,
-    errorOnDeprecated: true,
-    testEnvironmentOptions: {
-        url: 'http://localhost'
     }
-}
-
-module.exports = config; 
+}; 
