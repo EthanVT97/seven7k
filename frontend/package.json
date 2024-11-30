@@ -67,7 +67,7 @@
     "scripts": {
         "start": "webpack serve --mode development --open",
         "build": "webpack --mode production",
-        "test": "jest --passWithNoTests",
+        "test": "jest --passWithNoTests --config jest.config.js",
         "type-check": "tsc --noEmit",
         "type-check:watch": "tsc --noEmit --watch"
     },
@@ -81,16 +81,6 @@
             "last 1 chrome version",
             "last 1 firefox version",
             "last 1 safari version"
-        ]
-    },
-    "jest": {
-        "preset": "ts-jest",
-        "testEnvironment": "jsdom",
-        "moduleNameMapper": {
-            "\\.(css|less|scss|sass)$": "identity-obj-proxy"
-        },
-        "setupFilesAfterEnv": [
-            "@testing-library/jest-dom/extend-expect"
         ]
     }
 }
