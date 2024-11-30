@@ -1,0 +1,31 @@
+{
+    "common": {
+        "send": "ပို့ရန်",
+        "search": "ရှာဖွေရန်",
+        "loading": "ခဏစောင့်ပါ...",
+        "error": "အမှား",
+        "success": "အောင်မြင်သည်"
+    },
+    "auth": {
+        "signIn": "အကောင့်ဝင်ရန်",
+        "signOut": "အကောင့်ထွက်ရန်",
+        "email": "အီးမေးလ်",
+        "password": "စကားဝှက်",
+        "rememberMe": "မှတ်ထားရန်",
+        "forgotPassword": "စကားဝှက်မေ့နေပါသလား?",
+        "createAccount": "အကောင့်အသစ်ဖွင့်ရန်"
+    },
+    "messaging": {
+        "selectChat": "စကားပြောရန် ရွေးချယ်ပါ",
+        "typeMessage": "မက်ဆေ့ချ်ရိုက်ထည့်ပါ...",
+        "noMessages": "မက်ဆေ့ချ်မရှိသေးပါ",
+        "newMessage": "မက်ဆေ့ချ်အသစ်"
+    },
+    "platforms": {
+        "whatsapp": "ဝက်စ်အက်ပ်",
+        "facebook": "ဖေ့စ်ဘွတ်",
+        "telegram": "တယ်လီဂရမ်",
+        "line": "လိုင်း",
+        "viber": "ဗိုင်ဘာ"
+    }
+}
