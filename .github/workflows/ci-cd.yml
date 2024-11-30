@@ -2,12 +2,12 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
     paths-ignore:
-      - '**.md'
+      - '**/*.md'
       - 'docs/**'
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
   workflow_dispatch:
 
 env:
@@ -20,6 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+
       - uses: actions/setup-node@v3
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -30,47 +31,49 @@ jobs:
 
       - name: Install Frontend Dependencies
         run: |
-          cd frontend
+          cd ${{ env.FRONTEND_DIR }}
           npm install
       
       - name: Install Backend Dependencies
         run: |
-          cd backend
+          cd ${{ env.BACKEND_DIR }}
           npm ci
 
       - name: Run Frontend Tests
         run: |
-          cd frontend
+          cd ${{ env.FRONTEND_DIR }}
           npm test
       
       - name: Run Backend Tests
         run: |
-          cd backend
+          cd ${{ env.BACKEND_DIR }}
           npm test
 
       - name: Build Frontend
         run: |
-          cd frontend
+          cd ${{ env.FRONTEND_DIR }}
           npm run build
       
       - name: Build Backend
         run: |
-          cd backend
+          cd ${{ env.BACKEND_DIR }}
           npm run build
 
   deploy:
+    needs: build
     runs-on: ubuntu-latest
     environment: production
+    if: github.ref == 'refs/heads/main'
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       
       - name: Deploy to DigitalOcean
         uses: digitalocean/action-doctl@v2
         with:
-          token: ${{ secrets }}
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
       
       - name: Save DigitalOcean kubeconfig
-        run: doctl kubernetes cluster kubeconfig save "${{ k8s-1-31-1-do-4-sgp1-1732997804550 }}"
+        run: doctl kubernetes cluster kubeconfig save "${{ secrets.DIGITALOCEAN_CLUSTER_NAME }}"
       
       - name: Deploy to Kubernetes
         run: |
