@@ -67,10 +67,10 @@ jobs:
       - name: Deploy to DigitalOcean
         uses: digitalocean/action-doctl@v2
         with:
-          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+          token: ${{ secrets }}
       
       - name: Save DigitalOcean kubeconfig
-        run: doctl kubernetes cluster kubeconfig save "${{ secrets.DIGITALOCEAN_CLUSTER_NAME }}"
+        run: doctl kubernetes cluster kubeconfig save "${{ k8s-1-31-1-do-4-sgp1-1732997804550 }}"
       
       - name: Deploy to Kubernetes
         run: |
