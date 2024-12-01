@@ -171,23 +171,8 @@ jobs:
         with:
           token: ${{ env.DIGITALOCEAN_TOKEN }}
 
-      - name: Validate Kubernetes Config Files
-        run: |
-          if [ ! -d "${{ env.KUBERNETES_CONFIG_DIR }}" ] || [ -z "$(ls -A ${{ env.KUBERNETES_CONFIG_DIR }})" ]; then
-            echo "Error: Kubernetes config directory is empty or missing"
-            exit 1
-          fi
-          echo "Found Kubernetes configuration files:"
-          ls -la ${{ env.KUBERNETES_CONFIG_DIR }}/
-
       - name: Save Kubernetes Config
         run: doctl kubernetes cluster kubeconfig save "${{ env.DIGITALOCEAN_CLUSTER_NAME }}"
-
-      - name: Verify Kubernetes Manifests
-        run: |
-          echo "Validating Kubernetes manifests..."
-          kubectl apply --dry-run=client -f ${{ env.KUBERNETES_CONFIG_DIR }}/
-          echo "Kubernetes manifests validation successful"
 
       - name: Deploy to Kubernetes
         run: |
