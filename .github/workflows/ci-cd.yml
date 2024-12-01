@@ -12,9 +12,6 @@ on:
 
 env:
   NODE_VERSION: '18'
-  FRONTEND_DIR: 'frontend'
-  BACKEND_DIR: 'seven7k'
-  KUBERNETES_CONFIG_DIR: 'k8s'
 
 jobs:
   setup:
@@ -29,15 +26,18 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
+          cache-dependency-path: '**/package-lock.json'
 
-      - name: Install Root Dependencies
+      - name: Install Dependencies
         run: npm install
 
-      - name: Cache Root node_modules
+      - name: Cache node_modules
         uses: actions/cache@v3
         with:
-          path: node_modules
-          key: ${{ runner.os }}-root-modules-${{ hashFiles('package-lock.json') }}
+          path: |
+            node_modules
+            */*/node_modules
+          key: ${{ runner.os }}-modules-${{ hashFiles('**/package-lock.json') }}
 
   frontend:
     name: Frontend Build & Test
@@ -45,7 +45,8 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ${{ env.FRONTEND_DIR }}
+        working-directory: frontend
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
@@ -55,17 +56,18 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-          cache-dependency-path: ${{ env.FRONTEND_DIR }}/package-lock.json
+          cache-dependency-path: '**/package-lock.json'
+
+      - name: Restore Cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            node_modules
+            */*/node_modules
+          key: ${{ runner.os }}-modules-${{ hashFiles('**/package-lock.json') }}
 
       - name: Install Dependencies
-        run: |
-          npm install
-          npm install -D @testing-library/react@16.0.1
-          npm install -D @types/jest@29.5.14
-          npm install -D @types/redux-mock-store@1.5.0
-          npm install -D jest@29.7.0
-          npm install -D jest-environment-jsdom@29.7.0
-          npm install -D ts-jest@29.1.1
+        run: npm install
 
       - name: Type Check
         run: npm run type-check
@@ -79,12 +81,13 @@ jobs:
       - name: Build
         run: npm run build
         env:
+          CI: true
           NODE_ENV: production
 
       - name: Cache Build
         uses: actions/cache@v3
         with:
-          path: ${{ env.FRONTEND_DIR }}/dist
+          path: dist
           key: ${{ runner.os }}-frontend-build-${{ github.sha }}
 
   backend:
@@ -93,7 +96,8 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ${{ env.BACKEND_DIR }}
+        working-directory: backend
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
@@ -103,7 +107,15 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-          cache-dependency-path: ${{ env.BACKEND_DIR }}/package-lock.json
+          cache-dependency-path: '**/package-lock.json'
+
+      - name: Restore Cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            node_modules
+            */*/node_modules
+          key: ${{ runner.os }}-modules-${{ hashFiles('**/package-lock.json') }}
 
       - name: Install Dependencies
         run: |
@@ -113,11 +125,12 @@ jobs:
           npm install -D @types/node@20.10.3
 
       - name: Type Check
-        run: npx tsc --noEmit
+        run: npm run type-check
 
       - name: Run Tests
         run: npm test
         env:
+          CI: true
           NODE_ENV: test
           JWT_SECRET: test-jwt-secret
           MONGODB_URI: mongodb://localhost:27017/test-db
@@ -125,23 +138,25 @@ jobs:
       - name: Build
         run: npm run build
         env:
+          CI: true
           NODE_ENV: production
 
       - name: Cache Build
         uses: actions/cache@v3
         with:
-          path: ${{ env.BACKEND_DIR }}/dist
+          path: dist
           key: ${{ runner.os }}-backend-build-${{ github.sha }}
 
   deploy:
     name: Deploy to Production
     needs: [frontend, backend]
     runs-on: ubuntu-latest
-    environment: production
     if: github.ref == 'refs/heads/main'
+    environment: production
     env:
       DIGITALOCEAN_TOKEN: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
       DIGITALOCEAN_CLUSTER_NAME: ${{ secrets.DIGITALOCEAN_CLUSTER_NAME }}
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
@@ -151,19 +166,16 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Install Root Dependencies
-        run: npm install
-
       - name: Restore Frontend Build
         uses: actions/cache@v3
         with:
-          path: ${{ env.FRONTEND_DIR }}/dist
+          path: frontend/dist
           key: ${{ runner.os }}-frontend-build-${{ github.sha }}
 
       - name: Restore Backend Build
         uses: actions/cache@v3
         with:
-          path: ${{ env.BACKEND_DIR }}/dist
+          path: backend/dist
           key: ${{ runner.os }}-backend-build-${{ github.sha }}
 
       - name: Set Up doctl
@@ -176,37 +188,18 @@ jobs:
 
       - name: Deploy to Kubernetes
         run: |
-          echo "Applying Kubernetes configurations..."
-          kubectl apply -f ${{ env.KUBERNETES_CONFIG_DIR }}/
-          
-          echo "Restarting deployments..."
+          kubectl apply -f k8s/
           kubectl rollout restart deployment/frontend-deployment
           kubectl rollout restart deployment/backend-deployment
 
       - name: Wait for Deployments
         timeout-minutes: 5
         run: |
-          echo "Waiting for frontend deployment..."
           kubectl rollout status deployment/frontend-deployment --timeout=300s
-          
-          echo "Waiting for backend deployment..."
           kubectl rollout status deployment/backend-deployment --timeout=300s
 
       - name: Verify Deployments
         run: |
-          echo "Current deployment status:"
           kubectl get deployments -o wide
-          
-          echo "Current pod status:"
           kubectl get pods -o wide
-
-      - name: Verify Service Accessibility
-        run: |
-          echo "Current service status:"
           kubectl get services -o wide
-          
-          echo "Checking endpoints..."
-          kubectl get endpoints
-          
-          echo "Checking ingress status..."
-          kubectl get ingress
