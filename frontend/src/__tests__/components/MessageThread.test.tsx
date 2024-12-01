@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { Provider } from 'react-redux';
 import configureStore from 'redux-mock-store';
@@ -14,6 +14,13 @@ Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
     configurable: true,
     value: mockScrollIntoView,
 });
+
+// Mock marked
+jest.mock('marked', () => ({
+    marked: {
+        parse: jest.fn().mockImplementation((text) => Promise.resolve(text))
+    }
+}));
 
 describe('MessageThread Component', () => {
     let store: ReturnType<typeof mockStore>;
@@ -47,10 +54,10 @@ describe('MessageThread Component', () => {
         expect(screen.getByRole('status')).toBeInTheDocument();
     });
 
-    it('renders messages correctly', () => {
+    it('renders messages correctly', async () => {
         const messages = [
-            { id: '1', content: 'Hello', role: 'user' as const, timestamp: new Date().toISOString() },
-            { id: '2', content: 'Hi there!', role: 'assistant' as const, timestamp: new Date().toISOString() }
+            { id: '1', content: 'Hello', role: 'user' as const, timestamp: new Date().toISOString(), platform: 'web' },
+            { id: '2', content: 'Hi there!', role: 'assistant' as const, timestamp: new Date().toISOString(), platform: 'web' }
         ];
 
         render(
@@ -59,8 +66,11 @@ describe('MessageThread Component', () => {
             </Provider>
         );
 
-        expect(screen.getByText('Hello')).toBeInTheDocument();
-        expect(screen.getByText('Hi there!')).toBeInTheDocument();
+        await waitFor(() => {
+            expect(screen.getByText('Hello')).toBeInTheDocument();
+            expect(screen.getByText('Hi there!')).toBeInTheDocument();
+        });
+
         expect(mockScrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth' });
     });
 }); 

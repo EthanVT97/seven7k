@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Message } from '../../types/message';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
@@ -10,9 +10,16 @@ interface MessageBubbleProps {
 }
 
 export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isTyping }) => {
-    // Determine if message is from user based on role
+    const [sanitizedHtml, setSanitizedHtml] = useState('');
     const isUser = message.role === 'user';
-    const sanitizedHtml = DOMPurify.sanitize(marked.parse(message.content));
+
+    useEffect(() => {
+        const parseContent = async () => {
+            const parsedContent = await marked.parse(message.content);
+            setSanitizedHtml(DOMPurify.sanitize(parsedContent));
+        };
+        parseContent();
+    }, [message.content]);
 
     return (
         <div
