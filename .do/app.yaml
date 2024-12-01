@@ -1,17 +1,66 @@
 name: seven7k-chatbot
 region: nyc
+domains:
+  - domain: seven7k.app
+    type: PRIMARY
 services:
-  - name: web
+  - name: frontend
+    instance_size_slug: basic-xxs
+    instance_count: 1
     github:
-      repo: EthanVT97/seven7k
       branch: main
-    buildpacks:
-      - name: nodejs
-    environment_slug: node-js
-    build_command: npm run build
+      repo: EthanVT97/seven7k
+      deploy_on_push: true
+    source_dir: frontend
+    build_command: |
+      npm ci
+      npm run build
     run_command: npm start
+    http_port: 80
+    routes:
+      - path: /seven7k
+        preserve_path_prefix: true
     envs:
-      - key: MONGODB_URI
-        value: "${MONGODB_URI}"
       - key: NODE_ENV
-        value: "production"
+        value: production
+      - key: PORT
+        value: "80"
+      - key: PUBLIC_URL
+        value: "/seven7k"
+
+  - name: backend
+    instance_size_slug: basic-xxs
+    instance_count: 1
+    github:
+      branch: main
+      repo: EthanVT97/seven7k
+      deploy_on_push: true
+    source_dir: backend
+    build_command: |
+      npm ci
+      npm install -g typescript
+      npm run build
+    run_command: npm start
+    http_port: 8080
+    routes:
+      - path: /seven7k/api
+        preserve_path_prefix: true
+    envs:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "8080"
+
+routes:
+  - path: /
+    redirect:
+      to: /seven7k
+      type: 301
+  - path: /api
+    redirect:
+      to: /seven7k/api
+      type: 301
+  - path: /app
+    redirect:
+      to: /seven7k/app
+      type: 301
