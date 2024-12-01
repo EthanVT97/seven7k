@@ -29,18 +29,24 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: |
+            ${{ env.FRONTEND_DIR }}/package-lock.json
+            ${{ env.BACKEND_DIR }}/package-lock.json
 
       - name: Install Frontend Dependencies
         working-directory: ${{ env.FRONTEND_DIR }}
-        run: npm ci
-      
+        run: |
+          npm ci
+          npm list marked || npm install marked
+
       - name: Install Backend Dependencies
         working-directory: ${{ env.BACKEND_DIR }}
         run: npm ci
 
       - name: Run Frontend Tests
         working-directory: ${{ env.FRONTEND_DIR }}
-        run: npm test
+        run: npm test -- --watchAll=false --ci --coverage
       
       - name: Run Backend Tests
         working-directory: ${{ env.BACKEND_DIR }}

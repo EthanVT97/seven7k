@@ -32,7 +32,7 @@ module.exports = {
     },
     testPathIgnorePatterns: ['/node_modules/', '/dist/'],
     transformIgnorePatterns: [
-        '/node_modules/',
+        '/node_modules/(?!(marked)/)',
         '^.+\\.module\\.(css|sass|scss)$'
     ],
     globals: {

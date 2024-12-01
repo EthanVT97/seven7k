@@ -12,7 +12,7 @@ interface MessageBubbleProps {
 export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isTyping }) => {
     // Determine if message is from user based on role
     const isUser = message.role === 'user';
-    const sanitizedHtml = DOMPurify.sanitize(marked.parse(message.content).toString());
+    const sanitizedHtml = DOMPurify.sanitize(marked.parse(message.content));
 
     return (
         <div
