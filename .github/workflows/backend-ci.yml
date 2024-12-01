@@ -28,25 +28,35 @@ jobs:
         cache: 'npm'
         cache-dependency-path: './backend/package-lock.json'
 
-    - name: Install dependencies
-      run: npm ci
+    - name: Install Dependencies
+      run: |
+        npm install
+        npm install typescript@5.3.2
+        npm install -D ts-node@10.9.1
+        npm install -D @types/node@20.10.3
+        npm install -D jest@29.7.0
+        npm install -D ts-jest@29.1.1
+        npm install -D @types/jest@29.5.10
+        npm install -D supertest@6.3.3
+        npm install -D @types/supertest@2.0.16
 
-    - name: Type check
-      run: npm run type-check
-
-    - name: Lint
-      run: npm run lint
+    - name: Type Check
+      run: npx tsc --noEmit
 
     - name: Build
       run: npm run build
 
     - name: Test
-      run: npm test -- --coverage
+      run: npm test
+      env:
+        NODE_ENV: test
+        JWT_SECRET: test-jwt-secret
+        MONGODB_URI: mongodb://localhost:27017/test-db
 
     - name: Upload coverage reports
       uses: codecov/codecov-action@v3
       with:
-        directory: ./backend/coverage
+        directory: ./coverage
         flags: backend
         name: backend-coverage
 
@@ -54,8 +64,28 @@ jobs:
       uses: actions/cache@v3
       with:
         path: |
-          ./backend/dist
-          ./backend/node_modules/.cache
+          ./dist
+          ./node_modules/.cache
         key: ${{ runner.os }}-backend-build-${{ github.sha }}
         restore-keys: |
-          ${{ runner.os }}-backend-build- 
+          ${{ runner.os }}-backend-build-
+
+    - name: Lint
+      run: |
+        npm install -g eslint
+        npm install -D eslint-config-prettier
+        npm install -D eslint-plugin-prettier
+        npm install -D @typescript-eslint/eslint-plugin
+        npm install -D @typescript-eslint/parser
+        npx eslint . --ext .ts
+
+    - name: Security Audit
+      run: npm audit --production
+
+    - name: Check Dependencies
+      run: |
+        echo "Checking for outdated dependencies..."
+        npm outdated || true
+        echo "Checking dependency tree..."
+        npm ls || true
+ 
