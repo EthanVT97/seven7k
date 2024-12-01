@@ -13,19 +13,13 @@ on:
 env:
   NODE_VERSION: '18'
   FRONTEND_DIR: 'frontend'
-  BACKEND_DIR: 'backend'
+  BACKEND_DIR: 'seven7k'
   KUBERNETES_CONFIG_DIR: 'k8s'
 
 jobs:
-  install-dependencies:
-    name: Install Dependencies
+  setup:
+    name: Setup Project
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        app: [frontend, backend]
-    defaults:
-      run:
-        working-directory: ./${{ matrix.app }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
@@ -35,70 +29,19 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-          cache-dependency-path: ./${{ matrix.app }}/package-lock.json
 
-      - name: Install Dependencies
-        run: |
-          if [ "${{ matrix.app }}" = "frontend" ]; then
-            npm install
-            npm install -D @types/dompurify@3.0.5
-            npm install -D @types/marked@5.0.2
-            npm install dompurify@3.2.2
-            npm install marked@11.2.0
-            npm install -D @types/trusted-types@2.0.7
-          else
-            npm install
-            npm install typescript@5.3.2
-            npm install -D ts-node@10.9.1
-            npm install -D @types/node@20.10.3
-          fi
+      - name: Install Root Dependencies
+        run: npm install
 
-      - name: Cache node_modules
+      - name: Cache Root node_modules
         uses: actions/cache@v3
         with:
-          path: ./${{ matrix.app }}/node_modules
-          key: ${{ runner.os }}-${{ matrix.app }}-modules-${{ hashFiles(format('./{0}/package-lock.json', matrix.app)) }}
-
-  frontend:
-    name: Frontend Build & Test
-    needs: install-dependencies
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ${{ env.FRONTEND_DIR }}
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Restore node_modules
-        uses: actions/cache@v3
-        with:
-          path: ./frontend/node_modules
-          key: ${{ runner.os }}-frontend-modules-${{ hashFiles('./frontend/package-lock.json') }}
-
-      - name: Type Check
-        run: npm run type-check
-
-      - name: Run Tests
-        run: npm test -- --watchAll=false --ci --coverage
-
-      - name: Build
-        run: npm run build
-
-      - name: Cache Build
-        uses: actions/cache@v3
-        with:
-          path: ./frontend/dist
-          key: ${{ runner.os }}-frontend-build-${{ github.sha }}
+          path: node_modules
+          key: ${{ runner.os }}-root-modules-${{ hashFiles('package-lock.json') }}
 
   backend:
     name: Backend Build & Test
-    needs: install-dependencies
+    needs: setup
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -111,12 +54,15 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ${{ env.BACKEND_DIR }}/package-lock.json
 
-      - name: Restore node_modules
-        uses: actions/cache@v3
-        with:
-          path: ./backend/node_modules
-          key: ${{ runner.os }}-backend-modules-${{ hashFiles('./backend/package-lock.json') }}
+      - name: Install Dependencies
+        run: |
+          npm install
+          npm install typescript@5.3.2
+          npm install -D ts-node@10.9.1
+          npm install -D @types/node@20.10.3
 
       - name: Type Check
         run: npx tsc --noEmit
@@ -134,8 +80,50 @@ jobs:
       - name: Cache Build
         uses: actions/cache@v3
         with:
-          path: ./backend/dist
+          path: ${{ env.BACKEND_DIR }}/dist
           key: ${{ runner.os }}-backend-build-${{ github.sha }}
+
+  frontend:
+    name: Frontend Build & Test
+    needs: setup
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ env.FRONTEND_DIR }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ${{ env.FRONTEND_DIR }}/package-lock.json
+
+      - name: Install Dependencies
+        run: |
+          npm install
+          npm install -D @types/dompurify@3.0.5
+          npm install -D @types/marked@5.0.2
+          npm install dompurify@3.2.2
+          npm install marked@11.2.0
+          npm install -D @types/trusted-types@2.0.7
+
+      - name: Type Check
+        run: npm run type-check
+
+      - name: Run Tests
+        run: npm test -- --watchAll=false --ci --coverage
+
+      - name: Build
+        run: npm run build
+
+      - name: Cache Build
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.FRONTEND_DIR }}/dist
+          key: ${{ runner.os }}-frontend-build-${{ github.sha }}
 
   deploy:
     name: Deploy to Production
@@ -150,16 +138,24 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install Root Dependencies
+        run: npm install
+
       - name: Restore Frontend Build
         uses: actions/cache@v3
         with:
-          path: ./frontend/dist
+          path: ${{ env.FRONTEND_DIR }}/dist
           key: ${{ runner.os }}-frontend-build-${{ github.sha }}
 
       - name: Restore Backend Build
         uses: actions/cache@v3
         with:
-          path: ./backend/dist
+          path: ${{ env.BACKEND_DIR }}/dist
           key: ${{ runner.os }}-backend-build-${{ github.sha }}
 
       - name: Set Up doctl
