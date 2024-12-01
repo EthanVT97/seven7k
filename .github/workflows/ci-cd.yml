@@ -27,15 +27,34 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
-      - name: Set Up Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
           cache-dependency-path: ${{ env.FRONTEND_DIR }}/package-lock.json
 
+      - name: Cache Dependencies
+        uses: actions/cache@v3
+        id: npm-cache
+        with:
+          path: |
+            **/node_modules
+            ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
+
       - name: Install Dependencies
+        if: steps.npm-cache.outputs.cache-hit != 'true'
         run: npm ci
+
+      - name: Verify Dependencies
+        run: |
+          npm ls marked || npm install marked
+          npm ls dompurify || npm install dompurify
+          npm ls @types/marked || npm install @types/marked
+          npm ls @types/dompurify || npm install @types/dompurify
 
       - name: Type Check
         run: npm run type-check
@@ -49,6 +68,7 @@ jobs:
           directory: ./coverage
           flags: frontend
           name: frontend-coverage
+          fail_ci_if_error: true
 
       - name: Build
         run: npm run build
@@ -57,8 +77,8 @@ jobs:
         uses: actions/cache@v3
         with:
           path: |
-            ${{ env.FRONTEND_DIR }}/dist
-            ${{ env.FRONTEND_DIR }}/node_modules/.cache
+            dist
+            node_modules/.cache
           key: ${{ runner.os }}-frontend-build-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-frontend-build-
@@ -73,14 +93,26 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
-      - name: Set Up Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
           cache-dependency-path: ${{ env.BACKEND_DIR }}/package-lock.json
 
+      - name: Cache Dependencies
+        uses: actions/cache@v3
+        id: npm-cache
+        with:
+          path: |
+            **/node_modules
+            ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
+
       - name: Install Dependencies
+        if: steps.npm-cache.outputs.cache-hit != 'true'
         run: npm ci
 
       - name: Run Tests
@@ -93,8 +125,8 @@ jobs:
         uses: actions/cache@v3
         with:
           path: |
-            ${{ env.BACKEND_DIR }}/dist
-            ${{ env.BACKEND_DIR }}/node_modules/.cache
+            dist
+            node_modules/.cache
           key: ${{ runner.os }}-backend-build-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-backend-build-
@@ -118,6 +150,8 @@ jobs:
           path: |
             ${{ env.FRONTEND_DIR }}/dist
           key: ${{ runner.os }}-frontend-build-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-frontend-build-
 
       - name: Restore Backend Build
         uses: actions/cache@v3
@@ -125,35 +159,65 @@ jobs:
           path: |
             ${{ env.BACKEND_DIR }}/dist
           key: ${{ runner.os }}-backend-build-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-backend-build-
 
       - name: Set Up doctl
         uses: digitalocean/action-doctl@v2
         with:
           token: ${{ env.DIGITALOCEAN_TOKEN }}
       
+      - name: Validate Kubernetes Config Files
+        run: |
+          if [ ! -d "${{ env.KUBERNETES_CONFIG_DIR }}" ] || [ -z "$(ls -A ${{ env.KUBERNETES_CONFIG_DIR }})" ]; then
+            echo "Error: Kubernetes config directory is empty or missing"
+            exit 1
+          fi
+          echo "Found Kubernetes configuration files:"
+          ls -la ${{ env.KUBERNETES_CONFIG_DIR }}/
+
       - name: Save Kubernetes Config
         run: doctl kubernetes cluster kubeconfig save "${{ env.DIGITALOCEAN_CLUSTER_NAME }}"
 
       - name: Verify Kubernetes Manifests
         run: |
-          if [ ! -d "${{ env.KUBERNETES_CONFIG_DIR }}" ]; then
-            echo "Error: Kubernetes config directory not found"
-            exit 1
-          fi
+          echo "Validating Kubernetes manifests..."
           kubectl apply --dry-run=client -f ${{ env.KUBERNETES_CONFIG_DIR }}/
+          echo "Kubernetes manifests validation successful"
 
       - name: Deploy to Kubernetes
         run: |
+          echo "Applying Kubernetes configurations..."
           kubectl apply -f ${{ env.KUBERNETES_CONFIG_DIR }}/
+          
+          echo "Restarting deployments..."
           kubectl rollout restart deployment/frontend-deployment
           kubectl rollout restart deployment/backend-deployment
 
       - name: Wait for Deployments
+        timeout-minutes: 5
         run: |
-          kubectl rollout status deployment/frontend-deployment
-          kubectl rollout status deployment/backend-deployment
+          echo "Waiting for frontend deployment..."
+          kubectl rollout status deployment/frontend-deployment --timeout=300s
+          
+          echo "Waiting for backend deployment..."
+          kubectl rollout status deployment/backend-deployment --timeout=300s
 
       - name: Verify Deployments
         run: |
+          echo "Current deployment status:"
           kubectl get deployments -o wide
+          
+          echo "Current pod status:"
           kubectl get pods -o wide
+
+      - name: Verify Service Accessibility
+        run: |
+          echo "Current service status:"
+          kubectl get services -o wide
+          
+          echo "Checking endpoints..."
+          kubectl get endpoints
+          
+          echo "Checking ingress status..."
+          kubectl get ingress
