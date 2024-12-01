@@ -14,13 +14,15 @@ env:
   NODE_VERSION: '18'
   FRONTEND_DIR: 'frontend'
   BACKEND_DIR: 'backend'
-  DIGITALOCEAN_TOKEN: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
-  DIGITALOCEAN_CLUSTER_NAME: ${{ secrets.DIGITALOCEAN_CLUSTER_NAME }}
   KUBERNETES_CONFIG_DIR: 'k8s'
 
 jobs:
-  build:
+  frontend:
+    name: Frontend Build & Test
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ env.FRONTEND_DIR }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
@@ -30,46 +32,101 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-          cache-dependency-path: |
-            ${{ env.FRONTEND_DIR }}/package-lock.json
-            ${{ env.BACKEND_DIR }}/package-lock.json
+          cache-dependency-path: ${{ env.FRONTEND_DIR }}/package-lock.json
 
-      - name: Install Frontend Dependencies
-        working-directory: ${{ env.FRONTEND_DIR }}
-        run: |
-          npm ci
-          npm list marked || npm install marked
-
-      - name: Install Backend Dependencies
-        working-directory: ${{ env.BACKEND_DIR }}
+      - name: Install Dependencies
         run: npm ci
 
-      - name: Run Frontend Tests
-        working-directory: ${{ env.FRONTEND_DIR }}
+      - name: Type Check
+        run: npm run type-check
+
+      - name: Run Tests
         run: npm test -- --watchAll=false --ci --coverage
-      
-      - name: Run Backend Tests
-        working-directory: ${{ env.BACKEND_DIR }}
-        run: npm test
 
-      - name: Build Frontend
-        working-directory: ${{ env.FRONTEND_DIR }}
-        run: npm run build
-      
-      - name: Build Backend
-        working-directory: ${{ env.BACKEND_DIR }}
+      - name: Upload Coverage Reports
+        uses: codecov/codecov-action@v3
+        with:
+          directory: ./coverage
+          flags: frontend
+          name: frontend-coverage
+
+      - name: Build
         run: npm run build
 
-  deploy:
-    needs: build
+      - name: Cache Build
+        uses: actions/cache@v3
+        with:
+          path: |
+            ${{ env.FRONTEND_DIR }}/dist
+            ${{ env.FRONTEND_DIR }}/node_modules/.cache
+          key: ${{ runner.os }}-frontend-build-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-frontend-build-
+
+  backend:
+    name: Backend Build & Test
     runs-on: ubuntu-latest
-    environment: production
-    if: github.ref == 'refs/heads/main'
+    defaults:
+      run:
+        working-directory: ${{ env.BACKEND_DIR }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
-      - name: Set Up doctl for DigitalOcean
+      - name: Set Up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ${{ env.BACKEND_DIR }}/package-lock.json
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Cache Build
+        uses: actions/cache@v3
+        with:
+          path: |
+            ${{ env.BACKEND_DIR }}/dist
+            ${{ env.BACKEND_DIR }}/node_modules/.cache
+          key: ${{ runner.os }}-backend-build-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-backend-build-
+
+  deploy:
+    name: Deploy to Production
+    needs: [frontend, backend]
+    runs-on: ubuntu-latest
+    environment: production
+    if: github.ref == 'refs/heads/main'
+    env:
+      DIGITALOCEAN_TOKEN: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+      DIGITALOCEAN_CLUSTER_NAME: ${{ secrets.DIGITALOCEAN_CLUSTER_NAME }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Restore Frontend Build
+        uses: actions/cache@v3
+        with:
+          path: |
+            ${{ env.FRONTEND_DIR }}/dist
+          key: ${{ runner.os }}-frontend-build-${{ github.sha }}
+
+      - name: Restore Backend Build
+        uses: actions/cache@v3
+        with:
+          path: |
+            ${{ env.BACKEND_DIR }}/dist
+          key: ${{ runner.os }}-backend-build-${{ github.sha }}
+
+      - name: Set Up doctl
         uses: digitalocean/action-doctl@v2
         with:
           token: ${{ env.DIGITALOCEAN_TOKEN }}
@@ -77,8 +134,26 @@ jobs:
       - name: Save Kubernetes Config
         run: doctl kubernetes cluster kubeconfig save "${{ env.DIGITALOCEAN_CLUSTER_NAME }}"
 
+      - name: Verify Kubernetes Manifests
+        run: |
+          if [ ! -d "${{ env.KUBERNETES_CONFIG_DIR }}" ]; then
+            echo "Error: Kubernetes config directory not found"
+            exit 1
+          fi
+          kubectl apply --dry-run=client -f ${{ env.KUBERNETES_CONFIG_DIR }}/
+
       - name: Deploy to Kubernetes
         run: |
           kubectl apply -f ${{ env.KUBERNETES_CONFIG_DIR }}/
           kubectl rollout restart deployment/frontend-deployment
           kubectl rollout restart deployment/backend-deployment
+
+      - name: Wait for Deployments
+        run: |
+          kubectl rollout status deployment/frontend-deployment
+          kubectl rollout status deployment/backend-deployment
+
+      - name: Verify Deployments
+        run: |
+          kubectl get deployments -o wide
+          kubectl get pods -o wide
