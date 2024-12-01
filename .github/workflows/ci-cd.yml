@@ -39,6 +39,54 @@ jobs:
           path: node_modules
           key: ${{ runner.os }}-root-modules-${{ hashFiles('package-lock.json') }}
 
+  frontend:
+    name: Frontend Build & Test
+    needs: setup
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ env.FRONTEND_DIR }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ${{ env.FRONTEND_DIR }}/package-lock.json
+
+      - name: Install Dependencies
+        run: |
+          npm install
+          npm install -D @testing-library/react@16.0.1
+          npm install -D @types/jest@29.5.14
+          npm install -D @types/redux-mock-store@1.5.0
+          npm install -D jest@29.7.0
+          npm install -D jest-environment-jsdom@29.7.0
+          npm install -D ts-jest@29.1.1
+
+      - name: Type Check
+        run: npm run type-check
+
+      - name: Run Tests
+        run: npm test
+        env:
+          CI: true
+          NODE_ENV: test
+
+      - name: Build
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+      - name: Cache Build
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.FRONTEND_DIR }}/dist
+          key: ${{ runner.os }}-frontend-build-${{ github.sha }}
+
   backend:
     name: Backend Build & Test
     needs: setup
@@ -76,54 +124,14 @@ jobs:
 
       - name: Build
         run: npm run build
+        env:
+          NODE_ENV: production
 
       - name: Cache Build
         uses: actions/cache@v3
         with:
           path: ${{ env.BACKEND_DIR }}/dist
           key: ${{ runner.os }}-backend-build-${{ github.sha }}
-
-  frontend:
-    name: Frontend Build & Test
-    needs: setup
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ${{ env.FRONTEND_DIR }}
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: ${{ env.FRONTEND_DIR }}/package-lock.json
-
-      - name: Install Dependencies
-        run: |
-          npm install
-          npm install -D @types/dompurify@3.0.5
-          npm install -D @types/marked@5.0.2
-          npm install dompurify@3.2.2
-          npm install marked@11.2.0
-          npm install -D @types/trusted-types@2.0.7
-
-      - name: Type Check
-        run: npm run type-check
-
-      - name: Run Tests
-        run: npm test -- --watchAll=false --ci --coverage
-
-      - name: Build
-        run: npm run build
-
-      - name: Cache Build
-        uses: actions/cache@v3
-        with:
-          path: ${{ env.FRONTEND_DIR }}/dist
-          key: ${{ runner.os }}-frontend-build-${{ github.sha }}
 
   deploy:
     name: Deploy to Production
