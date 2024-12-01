@@ -23,6 +23,34 @@ app.use((0, helmet_1.default)());
 app.use((0, morgan_1.default)('dev'));
 app.use(express_1.default.json());
 app.use(express_1.default.urlencoded({ extended: true }));
+// Root route
+app.get('/', (req, res) => {
+    res.json({
+        message: 'SEVEN7K API Server',
+        status: 'running',
+        version: '1.0.0',
+        endpoints: {
+            auth: {
+                register: 'POST /api/auth/register',
+                login: 'POST /api/auth/login',
+                logout: 'POST /api/auth/logout',
+                profile: 'GET /api/auth/profile'
+            },
+            messages: {
+                list: 'GET /api/messages',
+                send: 'POST /api/messages',
+                status: 'PATCH /api/messages/:messageId/status'
+            },
+            webhooks: {
+                whatsapp: 'POST /api/webhooks/whatsapp',
+                facebook: 'POST /api/webhooks/facebook',
+                telegram: 'POST /api/webhooks/telegram',
+                line: 'POST /api/webhooks/line',
+                viber: 'POST /api/webhooks/viber'
+            }
+        }
+    });
+});
 // Create HTTP server
 const server = (0, http_1.createServer)(app);
 // Initialize Socket.IO
@@ -43,8 +71,11 @@ app.use('/api/users', users_1.default);
 app.use('/api/webhooks', (0, webhooks_1.createWebhookRouter)(io));
 // Error handling middleware
 app.use(errorHandler_1.errorHandler);
-// Connect to MongoDB
-mongoose_1.default.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/seven7k')
+// Connect to MongoDB with options
+mongoose_1.default.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/seven7k', {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+})
     .then(() => console.log('Connected to MongoDB'))
     .catch((err) => console.error('MongoDB connection error:', err));
 // Socket.IO connection handling
@@ -57,5 +88,5 @@ io.on('connection', (socket) => {
 // Start server
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    console.log(`Server running on http://localhost:${PORT}`);
 });

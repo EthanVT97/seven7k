@@ -10,10 +10,8 @@ interface MessageBubbleProps {
 }
 
 export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isTyping }) => {
-    // Determine if message is from user based on sender info instead of role
-    const isUser = typeof message.sender === 'string'
-        ? false // If sender is a string ID, it's not the user
-        : message.sender.id === 'current_user_id'; // Replace with actual user ID check
+    // Determine if message is from user based on role
+    const isUser = message.role === 'user';
     const sanitizedHtml = DOMPurify.sanitize(marked.parse(message.content).toString());
 
     return (

@@ -45,15 +45,25 @@ const MessageThread: React.FC<MessageThreadProps> = ({ messages, loading }) => {
         }));
     };
 
-    const messageGroups = groupMessagesByDate(messages);
-
     if (loading) {
-        return <div className="flex-1 p-4">Loading messages...</div>;
+        return (
+            <div className="flex-1 p-4" role="status" aria-label="Loading messages">
+                Loading messages...
+            </div>
+        );
+    }
+
+    if (messages.length === 0) {
+        return (
+            <div className="flex-1 p-4 flex justify-center items-center text-gray-500">
+                No messages yet
+            </div>
+        );
     }
 
     return (
         <div className="flex-1 overflow-y-auto p-4">
-            {messageGroups.map((group, groupIndex) => (
+            {groupMessagesByDate(messages).map((group, groupIndex) => (
                 <div key={group.date.toISOString()} className="mb-6">
                     <div className="text-center mb-4">
                         <span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-sm">

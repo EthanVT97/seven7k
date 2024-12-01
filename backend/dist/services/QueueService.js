@@ -1,82 +1,76 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.QueueService = void 0;
+const bull_1 = __importDefault(require("bull"));
+const logger_1 = __importDefault(require("../utils/logger"));
 class QueueService {
     constructor() {
-        this.queues = new Map();
-        this.delayedQueues = new Map();
-        this.deadLetterQueues = new Map();
-        this.maxRetries = 3;
-        this.retryDelay = 60000; // 1 minute
+        this.messageQueue = new bull_1.default('messages', {
+            redis: {
+                host: process.env.REDIS_HOST,
+                port: parseInt(process.env.REDIS_PORT || '6379'),
+                password: process.env.REDIS_PASSWORD
+            },
+            defaultJobOptions: {
+                attempts: 3,
+                backoff: {
+                    type: 'exponential',
+                    delay: 1000
+                }
+            }
+        });
+        this.setupQueueHandlers();
     }
-    getQueue(platform) {
-        if (!this.queues.has(platform)) {
-            this.queues.set(platform, []);
+    static getInstance() {
+        if (!QueueService.instance) {
+            QueueService.instance = new QueueService();
         }
-        return this.queues.get(platform);
+        return QueueService.instance;
     }
-    getDelayedQueue(platform) {
-        if (!this.delayedQueues.has(platform)) {
-            this.delayedQueues.set(platform, []);
-        }
-        return this.delayedQueues.get(platform);
-    }
-    getDeadLetterQueue(platform) {
-        if (!this.deadLetterQueues.has(platform)) {
-            this.deadLetterQueues.set(platform, []);
-        }
-        return this.deadLetterQueues.get(platform);
-    }
-    async enqueue(platform, message) {
-        const queueMessage = {
-            ...message,
-            retryCount: 0,
-            timestamp: Date.now()
-        };
-        const queue = this.getQueue(platform);
-        queue.push(queueMessage);
-    }
-    async dequeue(platform) {
-        const queue = this.getQueue(platform);
-        return queue.shift() || null;
-    }
-    async requeueWithBackoff(platform, message) {
-        if (message.retryCount >= this.maxRetries) {
-            await this.moveToDeadLetter(platform, message, new Error('Max retries exceeded'));
-            return;
-        }
-        message.retryCount++;
-        const delay = this.retryDelay * Math.pow(2, message.retryCount - 1);
-        await this.scheduleMessage(platform, message, Date.now() + delay);
-    }
-    async scheduleMessage(platform, message, executeAt) {
-        const delayedQueue = this.getDelayedQueue(platform);
-        delayedQueue.push({ message, executeAt });
-        delayedQueue.sort((a, b) => a.executeAt - b.executeAt);
-    }
-    async getReadyScheduledMessages(platform) {
-        const now = Date.now();
-        const delayedQueue = this.getDelayedQueue(platform);
-        const readyMessages = delayedQueue
-            .filter(item => item.executeAt <= now)
-            .map(item => item.message);
-        // Remove processed messages
-        this.delayedQueues.set(platform, delayedQueue.filter(item => item.executeAt > now));
-        return readyMessages;
-    }
-    async moveToDeadLetter(platform, message, error) {
-        const deadLetterQueue = this.getDeadLetterQueue(platform);
-        deadLetterQueue.push({
-            message,
-            error: error.message,
-            timestamp: Date.now()
+    setupQueueHandlers() {
+        this.messageQueue.on('failed', (job, err) => {
+            logger_1.default.error('Message processing failed', {
+                jobId: job.id,
+                error: err.message,
+                attempts: job.attemptsMade
+            });
+        });
+        this.messageQueue.on('completed', (job) => {
+            logger_1.default.info('Message processed successfully', {
+                jobId: job.id,
+                processingTime: Date.now() - job.timestamp
+            });
         });
     }
-    async getQueueStats(platform) {
+    async addToQueue(message, options) {
+        try {
+            const job = await this.messageQueue.add(message, options);
+            logger_1.default.info('Message added to queue', { jobId: job.id });
+            return job;
+        }
+        catch (error) {
+            logger_1.default.error('Failed to add message to queue', { error });
+            throw error;
+        }
+    }
+    async processQueue(processor) {
+        this.messageQueue.process(processor);
+    }
+    async getQueueStatus() {
+        const [waiting, active, completed, failed] = await Promise.all([
+            this.messageQueue.getWaitingCount(),
+            this.messageQueue.getActiveCount(),
+            this.messageQueue.getCompletedCount(),
+            this.messageQueue.getFailedCount()
+        ]);
         return {
-            queueLength: this.getQueue(platform).length,
-            delayedCount: this.getDelayedQueue(platform).length,
-            deadLetterCount: this.getDeadLetterQueue(platform).length
+            waiting,
+            active,
+            completed,
+            failed
         };
     }
 }
