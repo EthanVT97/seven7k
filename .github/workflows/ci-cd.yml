@@ -17,8 +17,51 @@ env:
   KUBERNETES_CONFIG_DIR: 'k8s'
 
 jobs:
+  install-dependencies:
+    name: Install Dependencies
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: [frontend, backend]
+    defaults:
+      run:
+        working-directory: ./${{ matrix.app }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ./${{ matrix.app }}/package-lock.json
+
+      - name: Install Dependencies
+        run: |
+          if [ "${{ matrix.app }}" = "frontend" ]; then
+            npm install
+            npm install -D @types/dompurify@3.0.5
+            npm install -D @types/marked@5.0.2
+            npm install dompurify@3.2.2
+            npm install marked@11.2.0
+            npm install -D @types/trusted-types@2.0.7
+          else
+            npm install
+            npm install typescript@5.3.2
+            npm install -D ts-node@10.9.1
+            npm install -D @types/node@20.10.3
+          fi
+
+      - name: Cache node_modules
+        uses: actions/cache@v3
+        with:
+          path: ./${{ matrix.app }}/node_modules
+          key: ${{ runner.os }}-${{ matrix.app }}-modules-${{ hashFiles(format('./{0}/package-lock.json', matrix.app)) }}
+
   frontend:
     name: Frontend Build & Test
+    needs: install-dependencies
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -31,17 +74,12 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: ${{ env.FRONTEND_DIR }}/package-lock.json
 
-      - name: Install Dependencies
-        run: |
-          npm install
-          npm install -D @types/dompurify@3.0.5
-          npm install -D @types/marked@5.0.2
-          npm install dompurify@3.2.2
-          npm install marked@11.2.0
-          npm install -D @types/trusted-types@2.0.7
+      - name: Restore node_modules
+        uses: actions/cache@v3
+        with:
+          path: ./frontend/node_modules
+          key: ${{ runner.os }}-frontend-modules-${{ hashFiles('./frontend/package-lock.json') }}
 
       - name: Type Check
         run: npm run type-check
@@ -55,15 +93,12 @@ jobs:
       - name: Cache Build
         uses: actions/cache@v3
         with:
-          path: |
-            dist
-            node_modules/.cache
+          path: ./frontend/dist
           key: ${{ runner.os }}-frontend-build-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-frontend-build-
 
   backend:
     name: Backend Build & Test
+    needs: install-dependencies
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -76,18 +111,22 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: ${{ env.BACKEND_DIR }}/package-lock.json
 
-      - name: Install Dependencies
-        run: |
-          npm install
-          npm install typescript@5.3.2
-          npm install -D ts-node@10.9.1
-          npm install -D @types/node@20.10.3
+      - name: Restore node_modules
+        uses: actions/cache@v3
+        with:
+          path: ./backend/node_modules
+          key: ${{ runner.os }}-backend-modules-${{ hashFiles('./backend/package-lock.json') }}
+
+      - name: Type Check
+        run: npx tsc --noEmit
 
       - name: Run Tests
         run: npm test
+        env:
+          NODE_ENV: test
+          JWT_SECRET: test-jwt-secret
+          MONGODB_URI: mongodb://localhost:27017/test-db
 
       - name: Build
         run: npm run build
@@ -95,12 +134,8 @@ jobs:
       - name: Cache Build
         uses: actions/cache@v3
         with:
-          path: |
-            dist
-            node_modules/.cache
+          path: ./backend/dist
           key: ${{ runner.os }}-backend-build-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-backend-build-
 
   deploy:
     name: Deploy to Production
@@ -118,26 +153,20 @@ jobs:
       - name: Restore Frontend Build
         uses: actions/cache@v3
         with:
-          path: |
-            ${{ env.FRONTEND_DIR }}/dist
+          path: ./frontend/dist
           key: ${{ runner.os }}-frontend-build-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-frontend-build-
 
       - name: Restore Backend Build
         uses: actions/cache@v3
         with:
-          path: |
-            ${{ env.BACKEND_DIR }}/dist
+          path: ./backend/dist
           key: ${{ runner.os }}-backend-build-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-backend-build-
 
       - name: Set Up doctl
         uses: digitalocean/action-doctl@v2
         with:
           token: ${{ env.DIGITALOCEAN_TOKEN }}
-      
+
       - name: Validate Kubernetes Config Files
         run: |
           if [ ! -d "${{ env.KUBERNETES_CONFIG_DIR }}" ] || [ -z "$(ls -A ${{ env.KUBERNETES_CONFIG_DIR }})" ]; then
