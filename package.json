@@ -1,15 +1,24 @@
 {
   "name": "seven7k-chatbot",
   "version": "1.0.0",
-  "engines": {
-    "node": ">=18"
-  },
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
   "scripts": {
-    "start": "node server.js",
-    "build": "cd seven7k && npm install && npm run build && cd ../frontend && npm install && npm run type-check && CI=true npm run build && cd ..",
-    "postinstall": "npm run build"
+    "postinstall": "npm run build",
+    "build": "npm run build:backend && npm run build:frontend",
+    "build:backend": "cd backend && npm install && npm run build",
+    "build:frontend": "cd frontend && npm install && npm run type-check && CI=true npm run build",
+    "start": "concurrently \"npm run start:backend\" \"npm run start:frontend\"",
+    "start:backend": "cd backend && npm start",
+    "start:frontend": "cd frontend && npm start",
+    "test": "npm run test:backend && npm run test:frontend",
+    "test:backend": "cd backend && npm test",
+    "test:frontend": "cd frontend && npm test"
   },
-  "dependencies": {
-    "express": "^4.18.2"
+  "devDependencies": {
+    "concurrently": "^8.2.2"
   }
 }
