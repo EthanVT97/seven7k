@@ -34,41 +34,20 @@ jobs:
           cache: 'npm'
           cache-dependency-path: ${{ env.FRONTEND_DIR }}/package-lock.json
 
-      - name: Cache Dependencies
-        uses: actions/cache@v3
-        id: npm-cache
-        with:
-          path: |
-            **/node_modules
-            ~/.npm
-          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-npm-
-
       - name: Install Dependencies
-        if: steps.npm-cache.outputs.cache-hit != 'true'
-        run: npm ci
-
-      - name: Verify Dependencies
         run: |
-          npm ls marked || npm install marked
-          npm ls dompurify || npm install dompurify
-          npm ls @types/marked || npm install @types/marked
-          npm ls @types/dompurify || npm install @types/dompurify
+          npm install
+          npm install -D @types/dompurify@3.0.5
+          npm install -D @types/marked@5.0.2
+          npm install dompurify@3.2.2
+          npm install marked@11.2.0
+          npm install -D @types/trusted-types@2.0.7
 
       - name: Type Check
         run: npm run type-check
 
       - name: Run Tests
         run: npm test -- --watchAll=false --ci --coverage
-
-      - name: Upload Coverage Reports
-        uses: codecov/codecov-action@v3
-        with:
-          directory: ./coverage
-          flags: frontend
-          name: frontend-coverage
-          fail_ci_if_error: true
 
       - name: Build
         run: npm run build
@@ -100,20 +79,12 @@ jobs:
           cache: 'npm'
           cache-dependency-path: ${{ env.BACKEND_DIR }}/package-lock.json
 
-      - name: Cache Dependencies
-        uses: actions/cache@v3
-        id: npm-cache
-        with:
-          path: |
-            **/node_modules
-            ~/.npm
-          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-npm-
-
       - name: Install Dependencies
-        if: steps.npm-cache.outputs.cache-hit != 'true'
-        run: npm ci
+        run: |
+          npm install
+          npm install typescript@5.3.2
+          npm install -D ts-node@10.9.1
+          npm install -D @types/node@20.10.3
 
       - name: Run Tests
         run: npm test
